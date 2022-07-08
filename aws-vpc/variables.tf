@@ -16,7 +16,7 @@ variable "subnet_prefix" {
 
 variable "subnet_size" {
   type        = string
-  default     = "/24"
+  default     = "/23"
   description = "The subnet mask bits that determine the size of the subnets."
 }
 

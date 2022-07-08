@@ -64,27 +64,6 @@ resource "aws_nat_gateway" "srvnat" {
   }
 }
 
-resource "aws_eip" "dbnat" {
-  count = var.enable_public_dbs ? var.num_database_subnets : 0
-
-  vpc = true
-
-  tags = {
-    "Name" = "${var.env_name}-database-public"
-  }
-}
-
-resource "aws_nat_gateway" "dbnat" {
-  count = var.enable_public_dbs ? var.num_database_subnets : 0
-
-  allocation_id = aws_eip.dbnat[count.index].id
-  subnet_id     = aws_subnet.dbpub[count.index].id
-
-  tags = {
-    "Name" = "${var.env_name}-database-public"
-  }
-}
-
 ##########################################
 # Route tables
 ##########################################
@@ -114,24 +93,6 @@ resource "aws_route_table" "srvprv" {
 
   tags = {
     "Name" = "${var.env_name}-srv-prv"
-  }
-}
-
-resource "aws_route_table" "dbprv" {
-  count = var.num_database_subnets
-
-  vpc_id = aws_vpc.main.id
-
-  dynamic "route" {
-    for_each = var.enable_public_dbs ? [1] : []
-    content {
-      cidr_block     = "0.0.0.0/0"
-      nat_gateway_id = aws_nat_gateway.dbnat[count.index].id
-    }
-  }
-
-  tags = {
-    "Name" = "${var.env_name}-db-prv"
   }
 }
 
@@ -179,26 +140,6 @@ resource "aws_route_table_association" "srvprv" {
   route_table_id = aws_route_table.srvprv[count.index].id
 }
 
-resource "aws_subnet" "dbpub" {
-  count = var.enable_public_dbs ? var.num_database_subnets : 0
-
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = cidrsubnet(local.full_cidr, local.subnet_size, count.index + 50)
-  availability_zone = "${var.region}${(count.index + 1) % 3 == 0 ? "c" : (count.index + 1) % 2 == 0 ? "b" : "a"}"
-
-  tags = {
-    "Name" = "${var.env_name}-database-public"
-    "Tier" = "DBPublic"
-  }
-}
-
-resource "aws_route_table_association" "dbpub" {
-  count = var.enable_public_dbs ? var.num_database_subnets : 0
-
-  subnet_id      = aws_subnet.dbpub[count.index].id
-  route_table_id = aws_route_table.pub.id
-}
-
 resource "aws_subnet" "dbprv" {
   count = var.num_database_subnets
 
@@ -210,12 +151,5 @@ resource "aws_subnet" "dbprv" {
     "Name" = "${var.env_name}-database-private"
     "Tier" = "DBPrivate"
   }
-}
-
-resource "aws_route_table_association" "dbprv" {
-  count = var.num_database_subnets
-
-  subnet_id      = aws_subnet.dbprv[count.index].id
-  route_table_id = aws_route_table.dbprv[count.index].id
 }
 

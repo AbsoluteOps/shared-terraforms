@@ -1,2 +1,2 @@
-env_name      = "test_auto"
-subnet_prefix = "10.180"
+env_name      = "tfbuild"
+subnet_prefix = "10.0"
